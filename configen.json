@@ -1,0 +1,33 @@
+{
+    "configen": {
+        "version": "4",
+        "sources": [
+            {
+                "id": "main",
+                "path": "app",
+                "r": true
+            },
+            {
+                "id": "test",
+                "path": "src/test/golang/unit",
+                "r": true
+            }
+        ],
+        "destinations": [
+            {
+                "id": "main",
+                "path": "gen/main4gac",
+                "sources": [
+                    "main"
+                ]
+            },
+            {
+                "id": "test",
+                "path": "gen/test4gac",
+                "sources": [
+                    "test"
+                ]
+            }
+        ]
+    }
+}
