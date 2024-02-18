@@ -3,7 +3,7 @@ package commands
 import "github.com/starter-go/cli"
 
 type subcmdGitAcmeAdd struct {
-	parent *GitAcme
+	parent *GitACME
 }
 
 func (inst *subcmdGitAcmeAdd) name() string {

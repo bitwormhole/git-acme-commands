@@ -4,7 +4,7 @@ import "github.com/starter-go/cli"
 
 // subcmdGitAcmeDo 是 'git-acme' 的根命令处理器，它把接收到的任务委托给具体的子命令
 type subcmdGitAcmeDo struct {
-	parent *GitAcme
+	parent *GitACME
 }
 
 func (inst *subcmdGitAcmeDo) name() string {

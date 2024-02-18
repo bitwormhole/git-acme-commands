@@ -4,6 +4,7 @@ import (
 	gitacmecommands "github.com/bitwormhole/git-acme-commands"
 	"github.com/bitwormhole/git-acme-commands/gen/main4gac"
 	"github.com/bitwormhole/git-acme-commands/gen/test4gac"
+	"github.com/bitwormhole/gitlib/modules/gitlib"
 	"github.com/starter-go/application"
 	"github.com/starter-go/cli/modules/cli"
 	"github.com/starter-go/starter"
@@ -16,6 +17,8 @@ func Module() application.Module {
 
 	mb.Depend(starter.Module())
 	mb.Depend(cli.Module())
+	mb.Depend(gitlib.Module())
+
 	mb.Depend(cli.ModuleExtention())
 
 	return mb.Create()
