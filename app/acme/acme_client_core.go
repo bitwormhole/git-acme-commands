@@ -3,7 +3,9 @@ package acme
 import (
 	"context"
 	"crypto"
+	"crypto/rand"
 	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"net/http"
 
@@ -12,6 +14,7 @@ import (
 	"github.com/mholt/acmez"
 	"github.com/mholt/acmez/acme"
 	"go.uber.org/zap"
+	"golang.org/x/net/idna"
 )
 
 // Request 。。。
@@ -169,7 +172,14 @@ func highLevelExample(wl *Request) error {
 	// is to use ObtainCertificate() and pass in your list of domains
 	// that you want on the cert. But if you need more flexibility, you
 	// should create a CSR yourself and use ObtainCertificateUsingCSR().
-	certs, err := client.ObtainCertificate(ctx, account, certPrivateKey, domains)
+
+	csr, err := makeCSR(domains, certPrivateKey)
+	if err != nil {
+		return err
+	}
+
+	// certs, err := client.ObtainCertificate(ctx, account, certPrivateKey, domains)
+	certs, err := client.ObtainCertificateUsingCSR(ctx, account, csr)
 	if err != nil {
 		return fmt.Errorf("obtaining certificate: %v", err)
 	}
@@ -187,6 +197,32 @@ func highLevelExample(wl *Request) error {
 	}
 
 	return nil
+}
+
+func makeCSR(domains []string, key crypto.Signer) (*x509.CertificateRequest, error) {
+
+	template := new(x509.CertificateRequest)
+
+	template.Subject.Country = []string{"CN"}
+	template.Subject.Province = []string{"guangxi"}
+	template.Subject.Locality = []string{"guilin"}
+	template.Subject.Organization = []string{"bitwormhole"}
+	template.Subject.OrganizationalUnit = []string{"IT"}
+
+	for _, name := range domains {
+		normalizedName, err := idna.ToASCII(name)
+		if err != nil {
+			return nil, fmt.Errorf("converting identifier '%s' to ASCII: %v", name, err)
+		}
+		template.DNSNames = append(template.DNSNames, normalizedName)
+	}
+
+	der, err := x509.CreateCertificateRequest(rand.Reader, template, key)
+	if err != nil {
+		return nil, err
+	}
+
+	return x509.ParseCertificateRequest(der)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -251,9 +287,17 @@ func (inst *myDNSProvider) formatRecord(zone string, item *libdns.Record) string
 }
 
 func (inst *myDNSProvider) waitForInput(ctx context.Context, token string, tip string) error {
+
+	bypass := true
+
 	for {
 		var text string
 		fmt.Println(tip)
+
+		if bypass {
+			break
+		}
+
 		_, err := fmt.Scan(&text)
 		if err != nil {
 			return err
@@ -261,6 +305,7 @@ func (inst *myDNSProvider) waitForInput(ctx context.Context, token string, tip s
 		if text == token {
 			return nil
 		}
+
 	}
-	// return nil
+	return nil
 }

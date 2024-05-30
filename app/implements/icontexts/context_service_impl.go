@@ -3,12 +3,13 @@ package icontexts
 import (
 	"context"
 	"os"
-	"strings"
 	"time"
 
-	"github.com/bitwormhole/git-acme-commands/app/contexts"
+	"github.com/bitwormhole/git-acme-commands/app/core"
+	"github.com/bitwormhole/git-acme-commands/app/data/ls"
 	"github.com/bitwormhole/gitlib"
 	"github.com/starter-go/afs"
+	"github.com/starter-go/base/lang"
 )
 
 // ContextServiceImpl ...
@@ -16,19 +17,23 @@ type ContextServiceImpl struct {
 
 	//starter:component
 
-	_as func(contexts.Service) //starter:as("#")
+	_as func(core.Service) //starter:as("#")
 
 	FS  afs.FS       //starter:inject("#")
 	Git gitlib.Agent //starter:inject("#")
 
 }
 
-func (inst *ContextServiceImpl) _impl() contexts.Service {
+func (inst *ContextServiceImpl) _impl() core.Service {
 	return inst
 }
 
-// NewGitRepoContext ...
-func (inst *ContextServiceImpl) NewGitRepoContext(c context.Context) (*contexts.GitRepoContext, error) {
+// LoadGitContext ...
+func (inst *ContextServiceImpl) LoadGitContext(c context.Context) (*core.GitContext, error) {
+
+	if c == nil {
+		c = context.Background()
+	}
 
 	wd, err := os.Getwd()
 	if err != nil {
@@ -36,78 +41,98 @@ func (inst *ContextServiceImpl) NewGitRepoContext(c context.Context) (*contexts.
 	}
 
 	wkdir := inst.FS.NewPath(wd)
-
-	layout, err := inst.Git.GetLib().Locator().Locate(wkdir)
+	gl := inst.Git.GetLib()
+	layout, err := gl.Locator().Locate(wkdir)
 	if err != nil {
 		return nil, err
 	}
 
-	ctx := new(contexts.GitRepoContext)
-	ctx.Parent = c
-	ctx.WD = wkdir
-	ctx.Layout = layout
-	ctx.Worktree = layout.Workspace()
+	wktree := layout.Workspace()
 
-	return ctx, nil
+	res := &core.GitContext{
+		Parent:   c,
+		WD:       wkdir,
+		Layout:   layout,
+		Worktree: wktree,
+	}
+
+	return res, nil
 }
 
-// NewCertRepoContext ...
-func (inst *ContextServiceImpl) NewCertRepoContext(c context.Context) (*contexts.CertRepoContext, error) {
+// LoadContainerContext ...
+func (inst *ContextServiceImpl) LoadContainerContext(c context.Context) (*core.ContainerContext, error) {
 
-	const (
-		fileMainConfig  = "acme.json"
-		fileLocalConfig = "acme-local.json"
-		fileDomainList  = "acme-domains.list"
-	)
-
-	parent, err := inst.NewGitRepoContext(c)
+	parent, err := inst.LoadGitContext(c)
 	if err != nil {
 		return nil, err
 	}
 
-	now := time.Now()
-	tree := parent.Worktree
-
-	ctx := new(contexts.CertRepoContext)
-	ctx.Parent = parent
-	ctx.Now = now
-
-	ctx.MainConfigFile = tree.GetChild(fileMainConfig)
-	ctx.LocalConfigFile = tree.GetChild(fileLocalConfig)
-	ctx.DomainListFile = tree.GetChild(fileDomainList)
-
-	return ctx, nil
-}
-
-// NewDomainContext ...
-func (inst *ContextServiceImpl) NewDomainContext(parent *contexts.CertRepoContext, domain string) (*contexts.DomainContext, error) {
-
-	// parent, err := inst.NewCertRepoContext(c)
-	// if err != nil {
-	// 	return nil, err
-	// }
-
-	domain = inst.normalizeDomainName(domain)
-	tree := parent.Parent.Worktree
-
-	ctx := new(contexts.DomainContext)
-	ctx.Parent = parent
-	ctx.DomainName = domain
-	ctx.DomainDirectory = tree.GetChild("domains").GetChild(domain)
-
-	cfpb := &certFilePathBuilder{
-		Domain: domain,
-		Dir:    ctx.DomainDirectory,
-		Time:   ctx.Parent.SessionTime,
+	// load config
+	wktree := parent.Worktree
+	configfile := wktree.GetChild("acme.config")
+	cfg, err := ls.LoadContainerConfig(configfile)
+	if err != nil {
+		return nil, err
 	}
-	ctx.CurrentCertFile = cfpb.createForCurrent()
-	ctx.LatestCertFile = cfpb.createForLatest()
 
-	return ctx, nil
+	res := &core.ContainerContext{
+		Parent:         parent,
+		Config:         cfg,
+		MainConfigFile: configfile,
+	}
+
+	// user
+	res.UserEmail = cfg.User.Email
+	res.UserName = cfg.User.Name
+	res.UserSigner = nil
+
+	//time
+	now := lang.Now()
+	interval := cfg.ACME.Interval
+	res.Now = now.Time()
+	res.SessionTime = inst.computeSessionTime(now, interval)
+	res.SessionInterval = interval.Duration()
+
+	return res, nil
 }
 
-func (inst *ContextServiceImpl) normalizeDomainName(domain string) string {
-	domain = strings.TrimSpace(domain)
-	domain = strings.ToLower(domain)
-	return domain
+func (inst *ContextServiceImpl) computeSessionTime(now lang.Time, interval lang.Milliseconds) time.Time {
+	step := lang.Time(interval)
+	if step < 1 {
+		step = 1000
+	}
+	t2 := now - (now % step)
+	return t2.Time()
+}
+
+// LoadDomainContext ...
+func (inst *ContextServiceImpl) LoadDomainContext(c context.Context) (*core.DomainContext, error) {
+
+	parent, err := inst.LoadContainerContext(c)
+	if err != nil {
+		return nil, err
+	}
+
+	wd := parent.Parent.WD
+
+	domainConfigFile := wd.GetChild("domain.config")
+	cfg, err := ls.LoadDomainConfig(domainConfigFile)
+	if err != nil {
+		return nil, err
+	}
+
+	dir := domainConfigFile.GetParent()
+	currentFile := dir.GetChild("current")
+	latestFile := dir.GetChild("latest")
+
+	res := &core.DomainContext{
+		Parent:           parent,
+		Config:           cfg,
+		DomainConfigFile: domainConfigFile,
+		DomainName:       cfg.Name,
+		DomainDirectory:  dir,
+		LatestCertFile:   latestFile,
+		CurrentCertFile:  currentFile,
+	}
+	return res, nil
 }

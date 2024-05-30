@@ -1,15 +1,13 @@
 package main4gac
 import (
     pdb462c5c7 "github.com/bitwormhole/git-acme-commands/app/commands"
-    pb02666f39 "github.com/bitwormhole/git-acme-commands/app/contexts"
+    p7d2748932 "github.com/bitwormhole/git-acme-commands/app/core"
     p9daa3c6fa "github.com/bitwormhole/git-acme-commands/app/implements/icontexts"
     p45e104bf1 "github.com/bitwormhole/git-acme-commands/app/implements/ikeys"
-    pfe1800bf5 "github.com/bitwormhole/git-acme-commands/app/implements/ikeys/pecdsa"
-    p169246a6f "github.com/bitwormhole/git-acme-commands/app/implements/ikeys/prsa"
-    p2e998826d "github.com/bitwormhole/git-acme-commands/app/keys"
     paeb460c7d "github.com/bitwormhole/gitlib"
     p0d2a11d16 "github.com/starter-go/afs"
     p1336d65ed "github.com/starter-go/cli"
+    pc38c9ad22 "github.com/starter-go/keys"
      "github.com/starter-go/application"
 )
 
@@ -48,7 +46,8 @@ func (inst* pdb462c5c7a_commands_GitACME) inject(injext application.InjectionExt
     com.FS = inst.getFS(ie)
     com.Git = inst.getGit(ie)
     com.Contexts = inst.getContexts(ie)
-    com.Keys = inst.getKeys(ie)
+    com.KeyManager = inst.getKeyManager(ie)
+    com.KeyDrivers = inst.getKeyDrivers(ie)
 
 
     return nil
@@ -70,13 +69,18 @@ func (inst*pdb462c5c7a_commands_GitACME) getGit(ie application.InjectionExt)paeb
 }
 
 
-func (inst*pdb462c5c7a_commands_GitACME) getContexts(ie application.InjectionExt)pb02666f39.Service{
-    return ie.GetComponent("#alias-b02666f395daf777103666ac99274a3d-Service").(pb02666f39.Service)
+func (inst*pdb462c5c7a_commands_GitACME) getContexts(ie application.InjectionExt)p7d2748932.Service{
+    return ie.GetComponent("#alias-7d27489328b03a090b67e7d081689fc8-Service").(p7d2748932.Service)
 }
 
 
-func (inst*pdb462c5c7a_commands_GitACME) getKeys(ie application.InjectionExt)p2e998826d.KeyPairProviderManager{
-    return ie.GetComponent("#alias-2e998826d6036014cdd504594af76975-KeyPairProviderManager").(p2e998826d.KeyPairProviderManager)
+func (inst*pdb462c5c7a_commands_GitACME) getKeyManager(ie application.InjectionExt)p7d2748932.KeyManager{
+    return ie.GetComponent("#alias-7d27489328b03a090b67e7d081689fc8-KeyManager").(p7d2748932.KeyManager)
+}
+
+
+func (inst*pdb462c5c7a_commands_GitACME) getKeyDrivers(ie application.InjectionExt)pc38c9ad22.DriverManager{
+    return ie.GetComponent("#alias-c38c9ad22b7867d5ce346589e145db9f-DriverManager").(pc38c9ad22.DriverManager)
 }
 
 
@@ -85,7 +89,7 @@ func (inst*pdb462c5c7a_commands_GitACME) getKeys(ie application.InjectionExt)p2e
 //
 // id:com-9daa3c6fa26070b9-icontexts-ContextServiceImpl
 // class:
-// alias:alias-b02666f395daf777103666ac99274a3d-Service
+// alias:alias-7d27489328b03a090b67e7d081689fc8-Service
 // scope:singleton
 //
 type p9daa3c6fa2_icontexts_ContextServiceImpl struct {
@@ -95,7 +99,7 @@ func (inst* p9daa3c6fa2_icontexts_ContextServiceImpl) register(cr application.Co
 	r := cr.NewRegistration()
 	r.ID = "com-9daa3c6fa26070b9-icontexts-ContextServiceImpl"
 	r.Classes = ""
-	r.Aliases = "alias-b02666f395daf777103666ac99274a3d-Service"
+	r.Aliases = "alias-7d27489328b03a090b67e7d081689fc8-Service"
 	r.Scope = "singleton"
 	r.NewFunc = inst.new
 	r.InjectFunc = inst.inject
@@ -131,128 +135,46 @@ func (inst*p9daa3c6fa2_icontexts_ContextServiceImpl) getGit(ie application.Injec
 
 
 
-// type p45e104bf1.KeyPairProviderManagerImpl in package:github.com/bitwormhole/git-acme-commands/app/implements/ikeys
+// type p45e104bf1.KeyManagerImpl in package:github.com/bitwormhole/git-acme-commands/app/implements/ikeys
 //
-// id:com-45e104bf1ff44630-ikeys-KeyPairProviderManagerImpl
+// id:com-45e104bf1ff44630-ikeys-KeyManagerImpl
 // class:
-// alias:alias-2e998826d6036014cdd504594af76975-KeyPairProviderManager
+// alias:alias-7d27489328b03a090b67e7d081689fc8-KeyManager
 // scope:singleton
 //
-type p45e104bf1f_ikeys_KeyPairProviderManagerImpl struct {
+type p45e104bf1f_ikeys_KeyManagerImpl struct {
 }
 
-func (inst* p45e104bf1f_ikeys_KeyPairProviderManagerImpl) register(cr application.ComponentRegistry) error {
+func (inst* p45e104bf1f_ikeys_KeyManagerImpl) register(cr application.ComponentRegistry) error {
 	r := cr.NewRegistration()
-	r.ID = "com-45e104bf1ff44630-ikeys-KeyPairProviderManagerImpl"
+	r.ID = "com-45e104bf1ff44630-ikeys-KeyManagerImpl"
 	r.Classes = ""
-	r.Aliases = "alias-2e998826d6036014cdd504594af76975-KeyPairProviderManager"
+	r.Aliases = "alias-7d27489328b03a090b67e7d081689fc8-KeyManager"
 	r.Scope = "singleton"
 	r.NewFunc = inst.new
 	r.InjectFunc = inst.inject
 	return r.Commit()
 }
 
-func (inst* p45e104bf1f_ikeys_KeyPairProviderManagerImpl) new() any {
-    return &p45e104bf1.KeyPairProviderManagerImpl{}
+func (inst* p45e104bf1f_ikeys_KeyManagerImpl) new() any {
+    return &p45e104bf1.KeyManagerImpl{}
 }
 
-func (inst* p45e104bf1f_ikeys_KeyPairProviderManagerImpl) inject(injext application.InjectionExt, instance any) error {
+func (inst* p45e104bf1f_ikeys_KeyManagerImpl) inject(injext application.InjectionExt, instance any) error {
 	ie := injext
-	com := instance.(*p45e104bf1.KeyPairProviderManagerImpl)
+	com := instance.(*p45e104bf1.KeyManagerImpl)
 	nop(ie, com)
 
 	
-    com.Providers = inst.getProviders(ie)
+    com.Drivers = inst.getDrivers(ie)
 
 
     return nil
 }
 
 
-func (inst*p45e104bf1f_ikeys_KeyPairProviderManagerImpl) getProviders(ie application.InjectionExt)[]p2e998826d.KeyPairProvider{
-    dst := make([]p2e998826d.KeyPairProvider, 0)
-    src := ie.ListComponents(".class-2e998826d6036014cdd504594af76975-KeyPairProvider")
-    for _, item1 := range src {
-        item2 := item1.(p2e998826d.KeyPairProvider)
-        dst = append(dst, item2)
-    }
-    return dst
-}
-
-
-
-// type pfe1800bf5.Provider in package:github.com/bitwormhole/git-acme-commands/app/implements/ikeys/pecdsa
-//
-// id:com-fe1800bf56aac5b5-pecdsa-Provider
-// class:class-2e998826d6036014cdd504594af76975-KeyPairProvider
-// alias:
-// scope:singleton
-//
-type pfe1800bf56_pecdsa_Provider struct {
-}
-
-func (inst* pfe1800bf56_pecdsa_Provider) register(cr application.ComponentRegistry) error {
-	r := cr.NewRegistration()
-	r.ID = "com-fe1800bf56aac5b5-pecdsa-Provider"
-	r.Classes = "class-2e998826d6036014cdd504594af76975-KeyPairProvider"
-	r.Aliases = ""
-	r.Scope = "singleton"
-	r.NewFunc = inst.new
-	r.InjectFunc = inst.inject
-	return r.Commit()
-}
-
-func (inst* pfe1800bf56_pecdsa_Provider) new() any {
-    return &pfe1800bf5.Provider{}
-}
-
-func (inst* pfe1800bf56_pecdsa_Provider) inject(injext application.InjectionExt, instance any) error {
-	ie := injext
-	com := instance.(*pfe1800bf5.Provider)
-	nop(ie, com)
-
-	
-
-
-    return nil
-}
-
-
-
-// type p169246a6f.Provider in package:github.com/bitwormhole/git-acme-commands/app/implements/ikeys/prsa
-//
-// id:com-169246a6f60e9b4b-prsa-Provider
-// class:class-2e998826d6036014cdd504594af76975-KeyPairProvider
-// alias:
-// scope:singleton
-//
-type p169246a6f6_prsa_Provider struct {
-}
-
-func (inst* p169246a6f6_prsa_Provider) register(cr application.ComponentRegistry) error {
-	r := cr.NewRegistration()
-	r.ID = "com-169246a6f60e9b4b-prsa-Provider"
-	r.Classes = "class-2e998826d6036014cdd504594af76975-KeyPairProvider"
-	r.Aliases = ""
-	r.Scope = "singleton"
-	r.NewFunc = inst.new
-	r.InjectFunc = inst.inject
-	return r.Commit()
-}
-
-func (inst* p169246a6f6_prsa_Provider) new() any {
-    return &p169246a6f.Provider{}
-}
-
-func (inst* p169246a6f6_prsa_Provider) inject(injext application.InjectionExt, instance any) error {
-	ie := injext
-	com := instance.(*p169246a6f.Provider)
-	nop(ie, com)
-
-	
-
-
-    return nil
+func (inst*p45e104bf1f_ikeys_KeyManagerImpl) getDrivers(ie application.InjectionExt)pc38c9ad22.DriverManager{
+    return ie.GetComponent("#alias-c38c9ad22b7867d5ce346589e145db9f-DriverManager").(pc38c9ad22.DriverManager)
 }
 
 

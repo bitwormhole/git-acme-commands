@@ -1,10 +1,11 @@
 package commands
 
 import (
-	"github.com/bitwormhole/git-acme-commands/app/config"
+	"github.com/bitwormhole/git-acme-commands/app/core"
+	"github.com/bitwormhole/git-acme-commands/app/data/dto"
 	"github.com/starter-go/afs"
+	"github.com/starter-go/application/properties"
 	"github.com/starter-go/cli"
-	"github.com/starter-go/vlog"
 )
 
 type subcmdGitAcmePrepare struct {
@@ -40,57 +41,96 @@ func (inst *subcmdGitAcmePrepare) init(c *cli.Context) error {
 func (inst *subcmdGitAcmePrepare) handle(t *cli.Task) error {
 
 	ctx1 := t.Context
-	ctx2, err := inst.parent.Contexts.NewCertRepoContext(ctx1)
+	ctxser := inst.parent.Contexts
+	ctx2, err := ctxser.LoadDomainContext(ctx1)
 	if err != nil {
 		return err
 	}
 
-	err = ctx2.LoadConfig()
+	err = inst.prepareKeyForUser(ctx2.Parent)
 	if err != nil {
 		return err
 	}
 
-	cfg := ctx2.MixedConfig
-	kplist := cfg.KeyPairs
-	for _, kp := range kplist {
-		err = inst.prepareKeyPair(kp, cfg)
-		if err != nil {
-			return err
-		}
+	err = inst.prepareKeyForDomain(ctx2)
+	if err != nil {
+		return err
 	}
 
 	return nil
 }
 
-func (inst *subcmdGitAcmePrepare) prepareKeyPair(pair *config.KeyPairDTO, cfg *config.VO) error {
+func (inst *subcmdGitAcmePrepare) prepareKeyForUser(ctx *core.ContainerContext) error {
 
-	dir, err := cfg.FindDirectory(pair.Directory)
+	userKey := ctx.Config.User.Key
+
+	kh, err := inst.prepareKeyWithFingerprint(ctx, userKey)
 	if err != nil {
 		return err
 	}
 
-	file := inst.parent.FS.NewPath(dir.Path).GetChild(pair.FileName)
-	path := file.GetPath()
-	if file.Exists() {
-		// skip
-		vlog.Info("skip key file [%s]", path)
+	if kh.Fingerprint() == userKey {
 		return nil
 	}
 
-	// gen key
-	provider, err := inst.parent.Keys.FindProvider(pair.Algorithm)
+	// update key
+	userKey = kh.Fingerprint()
+
+	// save to config file ('acme.config')
+	file := ctx.MainConfigFile
+	props := make(map[string]string)
+	props["user.key"] = userKey.String()
+	return inst.updateConfigFile(file, props)
+}
+
+func (inst *subcmdGitAcmePrepare) prepareKeyForDomain(dc *core.DomainContext) error {
+
+	cc := dc.Parent
+	key := dc.Config.Key
+
+	kh, err := inst.prepareKeyWithFingerprint(cc, key)
 	if err != nil {
 		return err
 	}
 
-	keypair, err := provider.Generator().Generate()
+	if kh.Fingerprint() == key {
+		return nil
+	}
+
+	// update key
+	key = kh.Fingerprint()
+
+	// save to config file ('domain.config')
+	file := dc.DomainConfigFile
+	props := make(map[string]string)
+	props["domain.key"] = key.String()
+	return inst.updateConfigFile(file, props)
+}
+
+func (inst *subcmdGitAcmePrepare) prepareKeyWithFingerprint(ctx *core.ContainerContext, fp dto.PublicKeyFingerprint) (core.KeyHolder, error) {
+	keyMan := inst.parent.KeyManager
+	if keyMan.Exists(ctx, fp) {
+		return keyMan.Find(ctx, fp)
+	}
+	return keyMan.CreateNew(ctx)
+}
+
+func (inst *subcmdGitAcmePrepare) updateConfigFile(file afs.Path, src map[string]string) error {
+
+	text, err := file.GetIO().ReadText(nil)
 	if err != nil {
 		return err
 	}
 
-	vlog.Info("generate key-pair and save to file [%s]", path)
+	dst, err := properties.Parse(text, nil)
+	if err != nil {
+		return err
+	}
 
-	opt := afs.Todo().Create(true).Dir(true).Mkdirs(true).Options()
-	file.MakeParents(opt)
-	return provider.Saver().Save(keypair, file)
+	for k, v := range src {
+		dst.SetProperty(k, v)
+	}
+
+	text = properties.Format(dst, properties.FormatWithGroups)
+	return file.GetIO().WriteText(text, nil)
 }

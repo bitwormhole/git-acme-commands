@@ -3,9 +3,9 @@ module github.com/bitwormhole/git-acme-commands
 go 1.20
 
 require (
-	github.com/starter-go/application v0.9.23 // direct
+	github.com/starter-go/application v0.9.26 // direct
 	github.com/starter-go/cli v1.0.5 // direct
-	github.com/starter-go/starter v1.0.8 // direct
+	github.com/starter-go/starter v1.0.10 // direct
 )
 
 require (
@@ -32,6 +32,7 @@ require (
 require (
 	github.com/klauspost/cpuid/v2 v2.2.5 // indirect
 	github.com/miekg/dns v1.1.55 // indirect
+	github.com/starter-go/keys v0.0.2 // indirect
 	github.com/zeebo/blake3 v0.2.3 // indirect
 	golang.org/x/mod v0.11.0 // indirect
 	golang.org/x/sys v0.13.0 // indirect

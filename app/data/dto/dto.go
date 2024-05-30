@@ -1,12 +1,9 @@
-package config
+package dto
 
 import "github.com/starter-go/base/lang"
 
 // AccountName ...
 type AccountName string
-
-// DomainName ...
-type DomainName string
 
 // KeyPairName ...
 type KeyPairName string
@@ -18,7 +15,6 @@ type DirectoryName string
 
 // ACME ...
 type ACME struct {
-	Account  AccountName       `json:"account"`
 	Interval lang.Milliseconds `json:"interval"`
 }
 
@@ -34,6 +30,7 @@ type AccountDTO struct {
 type DomainDTO struct {
 	Name    DomainName  `json:"name"`
 	KeyPair KeyPairName `json:"keypair"`
+	Enabled bool        `json:"enabled"`
 }
 
 // KeyPairDTO ...

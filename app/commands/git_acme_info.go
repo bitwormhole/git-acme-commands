@@ -1,6 +1,10 @@
 package commands
 
-import "github.com/starter-go/cli"
+import (
+	"fmt"
+
+	"github.com/starter-go/cli"
+)
 
 type subcmdGitAcmeInfo struct {
 	parent *GitACME
@@ -34,22 +38,6 @@ func (inst *subcmdGitAcmeInfo) init(c *cli.Context) error {
 
 func (inst *subcmdGitAcmeInfo) handle(t *cli.Task) error {
 
-	ctx1 := t.Context
+	return fmt.Errorf("no impl")
 
-	ctx2, err := inst.parent.Contexts.NewCertRepoContext(ctx1)
-	if err != nil {
-		return err
-	}
-
-	err = ctx2.LoadConfig()
-	if err != nil {
-		return err
-	}
-
-	err = ctx2.LoadDomainList()
-	if err != nil {
-		return err
-	}
-
-	return nil
 }

@@ -7,6 +7,7 @@ import (
 	"github.com/bitwormhole/gitlib/modules/gitlib"
 	"github.com/starter-go/application"
 	"github.com/starter-go/cli/modules/cli"
+	"github.com/starter-go/keys/modules/keys"
 	"github.com/starter-go/starter"
 )
 
@@ -18,6 +19,7 @@ func Module() application.Module {
 	mb.Depend(starter.Module())
 	mb.Depend(cli.Module())
 	mb.Depend(gitlib.Module())
+	mb.Depend(keys.ModuleForLib())
 
 	mb.Depend(cli.ModuleExtention())
 

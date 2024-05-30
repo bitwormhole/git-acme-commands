@@ -4,12 +4,13 @@ import (
 	"context"
 	"os"
 
-	"github.com/bitwormhole/git-acme-commands/app/contexts"
-	"github.com/bitwormhole/git-acme-commands/app/keys"
+	"github.com/bitwormhole/git-acme-commands/app/core"
+
 	"github.com/bitwormhole/gitlib"
 	"github.com/starter-go/afs"
 	"github.com/starter-go/application"
 	"github.com/starter-go/cli"
+	"github.com/starter-go/keys"
 )
 
 type subcommand interface {
@@ -23,11 +24,12 @@ type GitACME struct {
 
 	_as func(cli.HandlerRegistry) //starter:as(".")
 
-	CLI      cli.CLI                     //starter:inject("#")
-	FS       afs.FS                      //starter:inject("#")
-	Git      gitlib.Agent                //starter:inject("#")
-	Contexts contexts.Service            //starter:inject("#")
-	Keys     keys.KeyPairProviderManager //starter:inject("#")
+	CLI        cli.CLI            //starter:inject("#")
+	FS         afs.FS             //starter:inject("#")
+	Git        gitlib.Agent       //starter:inject("#")
+	Contexts   core.Service       //starter:inject("#")
+	KeyManager core.KeyManager    //starter:inject("#")
+	KeyDrivers keys.DriverManager //starter:inject("#")
 
 }
 
@@ -47,14 +49,19 @@ func (inst *GitACME) GetHandlers() []*cli.HandlerRegistration {
 
 	sublist := make([]subcommand, 0)
 
-	sublist = append(sublist, &subcmdGitAcmeAdd{parent: inst})
-	sublist = append(sublist, &subcmdGitAcmeDo{parent: inst})
+	sublist = append(sublist, &subcmdGitAcmeDomainAdd{parent: inst})
+	sublist = append(sublist, &subcmdGitAcmeDomainList{parent: inst})
 	sublist = append(sublist, &subcmdGitAcmeHelp{parent: inst})
 	sublist = append(sublist, &subcmdGitAcmeInfo{parent: inst})
 	sublist = append(sublist, &subcmdGitAcmeInit{parent: inst})
+	sublist = append(sublist, &subcmdGitAcmeNewAccount{parent: inst})
 	sublist = append(sublist, &subcmdGitAcmePrepare{parent: inst})
 	sublist = append(sublist, &subcmdGitAcmeRequest{parent: inst})
 	sublist = append(sublist, &subcmdGitAcmeUpdate{parent: inst})
+
+	sublist = append(sublist, inst.makeSubCommandProxy("git-acme"))
+	sublist = append(sublist, inst.makeSubCommandProxy("git-acme-domain"))
+	sublist = append(sublist, inst.makeSubCommandProxy("git-acme-cert"))
 
 	all := make([]*cli.HandlerRegistration, 0)
 	for _, subitem := range sublist {
@@ -62,6 +69,14 @@ func (inst *GitACME) GetHandlers() []*cli.HandlerRegistration {
 		all = append(all, reg)
 	}
 	return all
+}
+
+func (inst *GitACME) makeSubCommandProxy(name string) subcommand {
+	sub := &subcmdGitAcmeDo{
+		parent: inst,
+		name:   name,
+	}
+	return sub
 }
 
 func (inst *GitACME) run() error {

@@ -1,14 +1,13 @@
 package commands
 
 import (
-	"crypto"
-	"sort"
+	"context"
+	"fmt"
+	"time"
 
 	"github.com/bitwormhole/git-acme-commands/app/acme"
-	"github.com/bitwormhole/git-acme-commands/app/config"
-	"github.com/bitwormhole/git-acme-commands/app/contexts"
+	"github.com/bitwormhole/git-acme-commands/app/core"
 	"github.com/starter-go/afs"
-	"github.com/starter-go/base/lang"
 	"github.com/starter-go/cli"
 	"github.com/starter-go/vlog"
 )
@@ -44,160 +43,160 @@ func (inst *subcmdGitAcmeRequest) init(c *cli.Context) error {
 }
 
 func (inst *subcmdGitAcmeRequest) handle(t *cli.Task) error {
+	t2 := new(subcmdGitAcmeRequestTask)
+	t2.root = inst.parent
+	t2.debug = true
+	return t2.run(t.Context)
+}
 
-	ctx1, err := inst.parent.Contexts.NewCertRepoContext(t.Context)
-	if err != nil {
-		return err
-	}
+////////////////////////////////////////////////////////////////////////////////
 
-	err = ctx1.LoadConfig()
-	if err != nil {
-		return err
-	}
+type subcmdGitAcmeRequestTask struct {
+	root  *GitACME
+	ctx   context.Context
+	cc    *core.ContainerContext
+	dc    *core.DomainContext
+	debug bool
 
-	err = ctx1.LoadDomainList()
-	if err != nil {
-		return err
-	}
+	req  *acme.RequestV2
+	resp *acme.ResponseV2
 
-	inst.prepareTimeFieldsForContext(ctx1)
+	latest afs.Path
+	target afs.Path
+}
 
-	domainlist := inst.getDomainList(ctx1)
-	for i, domain := range domainlist {
+func (inst *subcmdGitAcmeRequestTask) run(ctx context.Context) error {
 
-		vlog.Info("certificate for domain [%s]", domain)
+	inst.ctx = ctx
+	steps := make([]func() error, 0)
 
-		ctx2, err := inst.parent.Contexts.NewDomainContext(ctx1, domain)
+	steps = append(steps, inst.prepareContext)
+	steps = append(steps, inst.prepareRequest)
+	steps = append(steps, inst.loadSigners)
+
+	steps = append(steps, inst.sendRequest)
+
+	steps = append(steps, inst.locateTargetCertFile)
+	steps = append(steps, inst.saveCertToFile)
+	steps = append(steps, inst.updateLatestFile)
+
+	for i, step := range steps {
+		fmt.Println("step: ", i)
+		err := step()
 		if err != nil {
 			return err
 		}
-
-		current := ctx2.CurrentCertFile
-		if current.Exists() {
-			vlog.Info("skip: certificate file exists, at path [%s]", current.GetPath())
-			continue
-		}
-
-		makeNewAccount := (i == 0)
-		err = inst.requestCert(ctx2, makeNewAccount)
-		if err != nil {
-			return err
-		}
 	}
-
 	return nil
 }
 
-func (inst *subcmdGitAcmeRequest) prepareTimeFieldsForContext(c *contexts.CertRepoContext) {
+func (inst *subcmdGitAcmeRequestTask) prepareContext() error {
 
-	now := lang.Now()
-	cfg := c.MixedConfig
+	ctx := inst.ctx
+	dc, err := inst.root.Contexts.LoadDomainContext(ctx)
+	if err != nil {
+		return err
+	}
+	cc := dc.Parent
 
-	interval := cfg.ACME.Interval
-	t0 := now - (now % lang.Time(interval))
-
-	c.Now = now.Time()
-	c.SessionTime = t0.Time()
-	c.SessionInterval = interval.Duration()
+	inst.cc = cc
+	inst.dc = dc
+	return nil
 }
 
-func (inst *subcmdGitAcmeRequest) getDomainList(c *contexts.CertRepoContext) []string {
-	src := c.Domains
-	dst := make([]string, 0)
-	for _, item := range src {
-		dst = append(dst, item.Domain)
+func (inst *subcmdGitAcmeRequestTask) prepareRequest() error {
+
+	req := &acme.RequestV2{}
+	if inst.debug {
+		req = req.PrepareForTest()
+	} else {
+		req = req.PrepareForProduction()
 	}
-	sort.Strings(dst)
-	return dst
+	req.UserEmail = inst.cc.UserEmail
+	req.DomainName = inst.dc.DomainName.String()
+
+	inst.req = req
+	return nil
 }
 
-func (inst *subcmdGitAcmeRequest) requestCert(dc *contexts.DomainContext, makeNewAccount bool) error {
+func (inst *subcmdGitAcmeRequestTask) loadSigners() error {
 
-	cfg := dc.Parent.MixedConfig
-	acmeInfo, err := cfg.GetACME()
+	cc := inst.cc
+	domainKeyFP := inst.dc.Config.Key
+	userKeyFP := inst.cc.Config.User.Key
+	keyman := inst.root.KeyManager
+
+	domainKeyHolder, err := keyman.Find(cc, domainKeyFP)
 	if err != nil {
 		return err
 	}
 
-	account, err := cfg.FindAccount(acmeInfo.Account)
+	userKeyHolder, err := keyman.Find(cc, userKeyFP)
 	if err != nil {
 		return err
 	}
 
-	domainName := dc.DomainName
-	domain, err := cfg.FindDomain(config.DomainName(domainName))
-	if err != nil {
-		return err
-	}
+	req := inst.req
+	req.DomainSigner = domainKeyHolder.Signer()
+	req.UserSigner = userKeyHolder.Signer()
+	return nil
+}
 
-	accountKey, err := inst.loadSinger(account.KeyPair, dc.Parent)
-	if err != nil {
-		return err
-	}
+func (inst *subcmdGitAcmeRequestTask) locateTargetCertFile() error {
 
-	certKey, err := inst.loadSinger(domain.KeyPair, dc.Parent)
-	if err != nil {
-		return err
-	}
+	suffix := ".cer"
+	dn := inst.dc.DomainName.String()
+	dir := inst.dc.DomainDirectory
+	now := inst.cc.SessionTime
 
-	req := new(acme.Request)
-	req.Domains = []string{domainName}
-	req.ACMEAddress = account.URL
-	req.Email = account.Email
-	req.AccountSinger = accountKey
-	req.CertSinger = certKey
-	req.DoNewAccount = makeNewAccount
+	strTime := now.Format(time.DateOnly)
+	name := dn + "-" + strTime + suffix
+
+	file := dir.GetChild(name)
+	inst.target = file
+	inst.latest = inst.dc.LatestCertFile
+	return nil
+}
+
+func (inst *subcmdGitAcmeRequestTask) sendRequest() error {
+
+	req := inst.req
 	req.DoMakeCert = true
-	err = req.Run()
+	req.DoNewAccount = true
+
+	resp, err := req.Send()
 	if err != nil {
 		return err
 	}
-
-	err = inst.saveCert(req.ResultContentData, dc.CurrentCertFile)
-	if err != nil {
-		return err
-	}
-
-	err = inst.saveCert(req.ResultContentData, dc.LatestCertFile)
-	if err != nil {
-		return err
-	}
-
+	inst.resp = resp
 	return nil
 }
 
-func (inst *subcmdGitAcmeRequest) saveCert(data []byte, file afs.Path) error {
+func (inst *subcmdGitAcmeRequestTask) saveCertToFile() error {
+
+	file := inst.target
+
 	if file.Exists() {
-		file.Delete()
+		path := file.GetPath()
+		vlog.Warn("the target file is exists, skip to save. [path=%s]", path)
+		return nil
 	}
-	opt := afs.Todo().File(true).Create(true).Write(true).Options()
-	file.MakeParents(opt)
+
+	resp := inst.resp
+	data := resp.ChainPEM
+	opt := afs.ToCreateFile()
 	return file.GetIO().WriteBinary(data, opt)
 }
 
-func (inst *subcmdGitAcmeRequest) loadSinger(name config.KeyPairName, c *contexts.CertRepoContext) (crypto.Signer, error) {
+func (inst *subcmdGitAcmeRequestTask) updateLatestFile() error {
 
-	cfg := c.MixedConfig
-	key, err := cfg.FindKeyPair(name)
-	if err != nil {
-		return nil, err
+	file := inst.latest
+	filename := inst.target.GetName()
+
+	opt := afs.ToWriteFile()
+	if !file.Exists() {
+		opt = afs.ToCreateFile()
 	}
 
-	dir, err := cfg.FindDirectory(key.Directory)
-	if err != nil {
-		return nil, err
-	}
-
-	file := inst.parent.FS.NewPath(dir.Path).GetChild(key.FileName)
-	provider, err := inst.parent.Keys.FindProvider(key.Algorithm)
-	if err != nil {
-		return nil, err
-	}
-
-	keypair, err := provider.Loader().Load(file)
-	if err != nil {
-		return nil, err
-	}
-
-	return keypair.Signer(), nil
+	return file.GetIO().WriteText(filename, opt)
 }
