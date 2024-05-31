@@ -45,7 +45,7 @@ func (inst *subcmdGitAcmeRequest) init(c *cli.Context) error {
 func (inst *subcmdGitAcmeRequest) handle(t *cli.Task) error {
 	t2 := new(subcmdGitAcmeRequestTask)
 	t2.root = inst.parent
-	t2.debug = true
+	t2.debug = false
 	return t2.run(t.Context)
 }
 
@@ -98,9 +98,11 @@ func (inst *subcmdGitAcmeRequestTask) prepareContext() error {
 		return err
 	}
 	cc := dc.Parent
+	debug := dc.Config.Debug
 
 	inst.cc = cc
 	inst.dc = dc
+	inst.debug = debug
 	return nil
 }
 
@@ -108,8 +110,10 @@ func (inst *subcmdGitAcmeRequestTask) prepareRequest() error {
 
 	req := &acme.RequestV2{}
 	if inst.debug {
+		vlog.Info("request cert as [Debug] mode")
 		req = req.PrepareForTest()
 	} else {
+		vlog.Info("request cert as [Production] mode")
 		req = req.PrepareForProduction()
 	}
 	req.UserEmail = inst.cc.UserEmail

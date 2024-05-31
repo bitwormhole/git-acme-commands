@@ -30,10 +30,14 @@ func (inst *DomainConfigLoader) Load(file afs.Path) (*vo.DomainConfig, error) {
 	getter := props.Getter()
 	dn := getter.GetString("domain.name")
 	key := getter.GetString("domain.key")
+	debug := getter.GetBool("domain.debug")
+	fetch := getter.GetString("domain.fetch")
 
 	dst := &vo.DomainConfig{
-		Name: dto.DomainName(dn),
-		Key:  dto.PublicKeyFingerprint(key),
+		Name:         dto.DomainName(dn),
+		Key:          dto.PublicKeyFingerprint(key),
+		FetchFromURL: fetch,
+		Debug:        debug,
 	}
 
 	err = getter.Error()

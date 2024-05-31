@@ -49,8 +49,10 @@ func (inst *GitACME) GetHandlers() []*cli.HandlerRegistration {
 
 	sublist := make([]subcommand, 0)
 
+	sublist = append(sublist, &subcmdGitAcmeCerts{parent: inst})
 	sublist = append(sublist, &subcmdGitAcmeDomainAdd{parent: inst})
 	sublist = append(sublist, &subcmdGitAcmeDomainList{parent: inst})
+	sublist = append(sublist, &subcmdGitAcmeFetch{parent: inst})
 	sublist = append(sublist, &subcmdGitAcmeHelp{parent: inst})
 	sublist = append(sublist, &subcmdGitAcmeInfo{parent: inst})
 	sublist = append(sublist, &subcmdGitAcmeInit{parent: inst})
