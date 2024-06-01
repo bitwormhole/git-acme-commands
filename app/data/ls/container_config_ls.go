@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/bitwormhole/git-acme-commands/app/data/dto"
+	"github.com/bitwormhole/git-acme-commands/app/data/dxo"
 	"github.com/bitwormhole/git-acme-commands/app/data/vo"
 
 	"github.com/starter-go/afs"
@@ -87,7 +88,7 @@ func (inst *ContainerConfigLoader) loadUser(p properties.Getter) (*dto.User, err
 	dst := &dto.User{
 		Name:  name,
 		Email: email,
-		Key:   dto.PublicKeyFingerprint(keypair),
+		Key:   dxo.Fingerprint(keypair),
 	}
 	err := p.Error()
 	return dst, err

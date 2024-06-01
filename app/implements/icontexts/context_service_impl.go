@@ -2,6 +2,7 @@ package icontexts
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"time"
 
@@ -19,8 +20,9 @@ type ContextServiceImpl struct {
 
 	_as func(core.Service) //starter:as("#")
 
-	FS  afs.FS       //starter:inject("#")
-	Git gitlib.Agent //starter:inject("#")
+	FS     afs.FS          //starter:inject("#")
+	Git    gitlib.Agent    //starter:inject("#")
+	KeyMan core.KeyManager //starter:inject("#")
 
 }
 
@@ -35,14 +37,13 @@ func (inst *ContextServiceImpl) LoadGitContext(c context.Context) (*core.GitCont
 		c = context.Background()
 	}
 
-	wd, err := os.Getwd()
+	wd, err := inst.innerGetWD()
 	if err != nil {
 		return nil, err
 	}
 
-	wkdir := inst.FS.NewPath(wd)
 	gl := inst.Git.GetLib()
-	layout, err := gl.Locator().Locate(wkdir)
+	layout, err := gl.Locator().Locate(wd)
 	if err != nil {
 		return nil, err
 	}
@@ -51,7 +52,7 @@ func (inst *ContextServiceImpl) LoadGitContext(c context.Context) (*core.GitCont
 
 	res := &core.GitContext{
 		Parent:   c,
-		WD:       wkdir,
+		WD:       wd,
 		Layout:   layout,
 		Worktree: wktree,
 	}
@@ -79,6 +80,7 @@ func (inst *ContextServiceImpl) LoadContainerContext(c context.Context) (*core.C
 		Parent:         parent,
 		Config:         cfg,
 		MainConfigFile: configfile,
+		KeyManager:     inst.KeyMan,
 	}
 
 	// user
@@ -107,15 +109,38 @@ func (inst *ContextServiceImpl) computeSessionTime(now lang.Time, interval lang.
 
 // LoadDomainContext ...
 func (inst *ContextServiceImpl) LoadDomainContext(c context.Context) (*core.DomainContext, error) {
+	wd, err := inst.innerGetWD()
+	if err != nil {
+		return nil, err
+	}
+	cfg := wd.GetChild("domain.config")
+	return inst.innerLoadDomainContextWithConfigFile(c, cfg)
+}
+
+// LoadDomainContextWithConfigFile ...
+func (inst *ContextServiceImpl) LoadDomainContextWithConfigFile(c context.Context, cfg afs.Path) (*core.DomainContext, error) {
+	return inst.innerLoadDomainContextWithConfigFile(c, cfg)
+}
+
+func (inst *ContextServiceImpl) innerGetWD() (afs.Path, error) {
+	wd, err := os.Getwd()
+	if err != nil {
+		return nil, err
+	}
+	dir := inst.FS.NewPath(wd)
+	if !dir.IsDirectory() {
+		return nil, fmt.Errorf("path of wd is not a dir [%s]", wd)
+	}
+	return dir, nil
+}
+
+func (inst *ContextServiceImpl) innerLoadDomainContextWithConfigFile(c context.Context, domainConfigFile afs.Path) (*core.DomainContext, error) {
 
 	parent, err := inst.LoadContainerContext(c)
 	if err != nil {
 		return nil, err
 	}
 
-	wd := parent.Parent.WD
-
-	domainConfigFile := wd.GetChild("domain.config")
 	cfg, err := ls.LoadDomainConfig(domainConfigFile)
 	if err != nil {
 		return nil, err
@@ -131,8 +156,8 @@ func (inst *ContextServiceImpl) LoadDomainContext(c context.Context) (*core.Doma
 		DomainConfigFile: domainConfigFile,
 		DomainName:       cfg.Name,
 		DomainDirectory:  dir,
-		LatestCertFile:   latestFile,
-		CurrentCertFile:  currentFile,
+		LatestFile:       latestFile,
+		CurrentFile:      currentFile,
 	}
 	return res, nil
 }

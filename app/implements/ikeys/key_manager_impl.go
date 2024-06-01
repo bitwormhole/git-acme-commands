@@ -5,7 +5,7 @@ import (
 	"crypto/rsa"
 
 	"github.com/bitwormhole/git-acme-commands/app/core"
-	"github.com/bitwormhole/git-acme-commands/app/data/dto"
+	"github.com/bitwormhole/git-acme-commands/app/data/dxo"
 	"github.com/starter-go/keys"
 )
 
@@ -24,14 +24,14 @@ func (inst *KeyManagerImpl) _impl() core.KeyManager {
 }
 
 // Exists ...
-func (inst *KeyManagerImpl) Exists(ctx *core.ContainerContext, fingerprint dto.PublicKeyFingerprint) bool {
+func (inst *KeyManagerImpl) Exists(ctx *core.ContainerContext, fingerprint dxo.Fingerprint) bool {
 	h := inst.getKeyHolder(ctx, fingerprint)
 	file := h.file
 	return file.Exists()
 }
 
 // Find ...
-func (inst *KeyManagerImpl) Find(ctx *core.ContainerContext, fingerprint dto.PublicKeyFingerprint) (core.KeyHolder, error) {
+func (inst *KeyManagerImpl) Find(ctx *core.ContainerContext, fingerprint dxo.Fingerprint) (core.KeyHolder, error) {
 	h := inst.getKeyHolder(ctx, fingerprint)
 	err := h.load()
 	if err != nil {
@@ -43,14 +43,15 @@ func (inst *KeyManagerImpl) Find(ctx *core.ContainerContext, fingerprint dto.Pub
 // CreateNew ...
 func (inst *KeyManagerImpl) CreateNew(ctx *core.ContainerContext) (core.KeyHolder, error) {
 
-	pk, err := rsa.GenerateKey(rand.Reader, 1024*2)
+	prikey, err := rsa.GenerateKey(rand.Reader, 1024*2)
 	if err != nil {
 		return nil, err
 	}
 
-	fingerprint := computeFingerprint(pk)
+	pubkey := prikey.PublicKey
+	fingerprint := core.ComputePublicKeyFingerprint(&pubkey)
 	h := inst.getKeyHolder(ctx, fingerprint)
-	h.pk = pk
+	h.pk = prikey
 	h.fingerprint = fingerprint
 
 	err = h.save()
@@ -61,7 +62,7 @@ func (inst *KeyManagerImpl) CreateNew(ctx *core.ContainerContext) (core.KeyHolde
 	return h, nil
 }
 
-func (inst *KeyManagerImpl) getKeyHolder(ctx *core.ContainerContext, fingerprint dto.PublicKeyFingerprint) *keyHolder {
+func (inst *KeyManagerImpl) getKeyHolder(ctx *core.ContainerContext, fingerprint dxo.Fingerprint) *keyHolder {
 
 	if fingerprint == "" {
 		fingerprint = "0000"

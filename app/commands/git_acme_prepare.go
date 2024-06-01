@@ -2,7 +2,7 @@ package commands
 
 import (
 	"github.com/bitwormhole/git-acme-commands/app/core"
-	"github.com/bitwormhole/git-acme-commands/app/data/dto"
+	"github.com/bitwormhole/git-acme-commands/app/data/dxo"
 	"github.com/starter-go/afs"
 	"github.com/starter-go/application/properties"
 	"github.com/starter-go/cli"
@@ -107,7 +107,7 @@ func (inst *subcmdGitAcmePrepare) prepareKeyForDomain(dc *core.DomainContext) er
 	return inst.updateConfigFile(file, props)
 }
 
-func (inst *subcmdGitAcmePrepare) prepareKeyWithFingerprint(ctx *core.ContainerContext, fp dto.PublicKeyFingerprint) (core.KeyHolder, error) {
+func (inst *subcmdGitAcmePrepare) prepareKeyWithFingerprint(ctx *core.ContainerContext, fp dxo.Fingerprint) (core.KeyHolder, error) {
 	keyMan := inst.parent.KeyManager
 	if keyMan.Exists(ctx, fp) {
 		return keyMan.Find(ctx, fp)

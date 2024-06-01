@@ -44,6 +44,9 @@ type ContainerContext struct {
 	UserEmail  string
 	UserSigner crypto.Signer
 
+	// services
+	KeyManager KeyManager
+
 	// time
 	Now             time.Time
 	SessionTime     time.Time
@@ -56,8 +59,8 @@ type DomainContext struct {
 
 	DomainDirectory  afs.Path
 	DomainConfigFile afs.Path // 'domain.config'
-	CurrentCertFile  afs.Path
-	LatestCertFile   afs.Path
+	CurrentFile      afs.Path
+	LatestFile       afs.Path
 
 	Config *vo.DomainConfig
 
@@ -74,6 +77,7 @@ type CertificateContext struct {
 	Parent *DomainContext
 
 	CertFile   afs.Path
-	Cert       x509.Certificate
+	Cert       *x509.Certificate
+	Chain      []*x509.Certificate
 	CertSigner crypto.Signer
 }

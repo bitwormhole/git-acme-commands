@@ -1,19 +1,18 @@
 package core
 
-import "context"
+import (
+	"context"
+
+	"github.com/starter-go/afs"
+)
 
 // Service 提供一组创建上下文的接口
 type Service interface {
-
-	// NewGitRepoContext(c context.Context) (*GitContext, error)
-
-	// NewCertRepoContext(c context.Context) (*ContainerContext, error)
-
-	// NewDomainContext(parent *ContainerContext, domain string) (*DomainContext, error)
-
 	LoadGitContext(c context.Context) (*GitContext, error)
 
 	LoadContainerContext(c context.Context) (*ContainerContext, error)
 
 	LoadDomainContext(c context.Context) (*DomainContext, error)
+
+	LoadDomainContextWithConfigFile(c context.Context, cfg afs.Path) (*DomainContext, error)
 }

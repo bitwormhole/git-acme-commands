@@ -158,7 +158,7 @@ func (inst *subcmdGitAcmeRequestTask) locateTargetCertFile() error {
 
 	file := dir.GetChild(name)
 	inst.target = file
-	inst.latest = inst.dc.LatestCertFile
+	inst.latest = inst.dc.LatestFile
 	return nil
 }
 

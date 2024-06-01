@@ -8,8 +8,8 @@ import (
 
 const (
 	theModuleName     = "github.com/bitwormhole/git-acme-commands"
-	theModuleVersion  = "v0.0.1"
-	theModuleRevision = 1
+	theModuleVersion  = "v0.1.0"
+	theModuleRevision = 2
 )
 
 ////////////////////////////////////////////////////////////////////////////////

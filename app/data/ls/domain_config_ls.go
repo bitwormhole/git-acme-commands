@@ -2,6 +2,7 @@ package ls
 
 import (
 	"github.com/bitwormhole/git-acme-commands/app/data/dto"
+	"github.com/bitwormhole/git-acme-commands/app/data/dxo"
 	"github.com/bitwormhole/git-acme-commands/app/data/vo"
 	"github.com/starter-go/afs"
 	"github.com/starter-go/application/properties"
@@ -35,7 +36,7 @@ func (inst *DomainConfigLoader) Load(file afs.Path) (*vo.DomainConfig, error) {
 
 	dst := &vo.DomainConfig{
 		Name:         dto.DomainName(dn),
-		Key:          dto.PublicKeyFingerprint(key),
+		Key:          dxo.Fingerprint(key),
 		FetchFromURL: fetch,
 		Debug:        debug,
 	}

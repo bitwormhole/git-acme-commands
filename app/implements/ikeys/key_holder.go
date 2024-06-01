@@ -3,29 +3,18 @@ package ikeys
 import (
 	"crypto"
 	"crypto/rsa"
-	"crypto/sha1"
-	"crypto/x509"
-	"encoding/hex"
 
 	"github.com/bitwormhole/git-acme-commands/app/core"
-	"github.com/bitwormhole/git-acme-commands/app/data/dto"
+	"github.com/bitwormhole/git-acme-commands/app/data/dxo"
 	"github.com/bitwormhole/git-acme-commands/app/data/ls"
 	"github.com/starter-go/afs"
 )
-
-func computeFingerprint(pk *rsa.PrivateKey) dto.PublicKeyFingerprint {
-	pub := pk.PublicKey
-	der := x509.MarshalPKCS1PublicKey(&pub)
-	sum := sha1.Sum(der)
-	str := hex.EncodeToString(sum[:])
-	return dto.PublicKeyFingerprint(str)
-}
 
 ////////////////////////////////////////////////////////////////////////////////
 
 type keyHolder struct {
 	file        afs.Path
-	fingerprint dto.PublicKeyFingerprint
+	fingerprint dxo.Fingerprint
 	pk          *rsa.PrivateKey
 }
 
@@ -46,10 +35,14 @@ func (inst *keyHolder) save() error {
 	return ls.SavePrivateKeyRSA(inst.pk, inst.file)
 }
 
-func (inst *keyHolder) Fingerprint() dto.PublicKeyFingerprint {
+func (inst *keyHolder) Fingerprint() dxo.Fingerprint {
 	return inst.fingerprint
 }
 
 func (inst *keyHolder) Signer() crypto.Signer {
 	return inst.pk
+}
+
+func (inst *keyHolder) Algorithm() string {
+	return "RSA"
 }

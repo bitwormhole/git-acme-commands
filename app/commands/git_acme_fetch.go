@@ -158,7 +158,7 @@ func (inst *subcmdGitAcmeFetchTask) locateFiles() error {
 	builder.WriteString(".fetch.cer")
 
 	name := builder.String()
-	inst.current = inst.dc.CurrentCertFile
+	inst.current = inst.dc.CurrentFile
 	inst.target = dir.GetChild(name)
 
 	s1 := inst.url

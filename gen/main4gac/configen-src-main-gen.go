@@ -6,6 +6,7 @@ import (
     p45e104bf1 "github.com/bitwormhole/git-acme-commands/app/implements/ikeys"
     paeb460c7d "github.com/bitwormhole/gitlib"
     p0d2a11d16 "github.com/starter-go/afs"
+    p0ef6f2938 "github.com/starter-go/application"
     p1336d65ed "github.com/starter-go/cli"
     pc38c9ad22 "github.com/starter-go/keys"
      "github.com/starter-go/application"
@@ -48,6 +49,7 @@ func (inst* pdb462c5c7a_commands_GitACME) inject(injext application.InjectionExt
     com.Contexts = inst.getContexts(ie)
     com.KeyManager = inst.getKeyManager(ie)
     com.KeyDrivers = inst.getKeyDrivers(ie)
+    com.AppContext = inst.getAppContext(ie)
 
 
     return nil
@@ -81,6 +83,11 @@ func (inst*pdb462c5c7a_commands_GitACME) getKeyManager(ie application.InjectionE
 
 func (inst*pdb462c5c7a_commands_GitACME) getKeyDrivers(ie application.InjectionExt)pc38c9ad22.DriverManager{
     return ie.GetComponent("#alias-c38c9ad22b7867d5ce346589e145db9f-DriverManager").(pc38c9ad22.DriverManager)
+}
+
+
+func (inst*pdb462c5c7a_commands_GitACME) getAppContext(ie application.InjectionExt)p0ef6f2938.Context{
+    return ie.GetContext()
 }
 
 
@@ -118,6 +125,7 @@ func (inst* p9daa3c6fa2_icontexts_ContextServiceImpl) inject(injext application.
 	
     com.FS = inst.getFS(ie)
     com.Git = inst.getGit(ie)
+    com.KeyMan = inst.getKeyMan(ie)
 
 
     return nil
@@ -131,6 +139,11 @@ func (inst*p9daa3c6fa2_icontexts_ContextServiceImpl) getFS(ie application.Inject
 
 func (inst*p9daa3c6fa2_icontexts_ContextServiceImpl) getGit(ie application.InjectionExt)paeb460c7d.Agent{
     return ie.GetComponent("#alias-aeb460c7d339df24b0b38a0d65e30102-Agent").(paeb460c7d.Agent)
+}
+
+
+func (inst*p9daa3c6fa2_icontexts_ContextServiceImpl) getKeyMan(ie application.InjectionExt)p7d2748932.KeyManager{
+    return ie.GetComponent("#alias-7d27489328b03a090b67e7d081689fc8-KeyManager").(p7d2748932.KeyManager)
 }
 
 

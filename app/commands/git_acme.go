@@ -24,12 +24,13 @@ type GitACME struct {
 
 	_as func(cli.HandlerRegistry) //starter:as(".")
 
-	CLI        cli.CLI            //starter:inject("#")
-	FS         afs.FS             //starter:inject("#")
-	Git        gitlib.Agent       //starter:inject("#")
-	Contexts   core.Service       //starter:inject("#")
-	KeyManager core.KeyManager    //starter:inject("#")
-	KeyDrivers keys.DriverManager //starter:inject("#")
+	CLI        cli.CLI             //starter:inject("#")
+	FS         afs.FS              //starter:inject("#")
+	Git        gitlib.Agent        //starter:inject("#")
+	Contexts   core.Service        //starter:inject("#")
+	KeyManager core.KeyManager     //starter:inject("#")
+	KeyDrivers keys.DriverManager  //starter:inject("#")
+	AppContext application.Context //starter:inject("context")
 
 }
 
@@ -50,16 +51,19 @@ func (inst *GitACME) GetHandlers() []*cli.HandlerRegistration {
 	sublist := make([]subcommand, 0)
 
 	sublist = append(sublist, &subcmdGitAcmeCerts{parent: inst})
+	sublist = append(sublist, &subcmdGitAcmeCurrent{parent: inst})
 	sublist = append(sublist, &subcmdGitAcmeDomainAdd{parent: inst})
 	sublist = append(sublist, &subcmdGitAcmeDomainList{parent: inst})
 	sublist = append(sublist, &subcmdGitAcmeFetch{parent: inst})
 	sublist = append(sublist, &subcmdGitAcmeHelp{parent: inst})
 	sublist = append(sublist, &subcmdGitAcmeInfo{parent: inst})
 	sublist = append(sublist, &subcmdGitAcmeInit{parent: inst})
+	sublist = append(sublist, &subcmdGitAcmeLatest{parent: inst})
 	sublist = append(sublist, &subcmdGitAcmeNewAccount{parent: inst})
 	sublist = append(sublist, &subcmdGitAcmePrepare{parent: inst})
 	sublist = append(sublist, &subcmdGitAcmeRequest{parent: inst})
 	sublist = append(sublist, &subcmdGitAcmeUpdate{parent: inst})
+	sublist = append(sublist, &subcmdGitAcmeVersion{parent: inst})
 
 	sublist = append(sublist, inst.makeSubCommandProxy("git-acme"))
 	sublist = append(sublist, inst.makeSubCommandProxy("git-acme-domain"))
